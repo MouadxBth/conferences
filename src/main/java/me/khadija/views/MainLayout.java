@@ -1,50 +1,42 @@
 package me.khadija.views;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.avatar.Avatar;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.MenuItem;
-import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.Header;
-import com.vaadin.flow.component.html.ListItem;
-import com.vaadin.flow.component.html.Nav;
-import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.html.UnorderedList;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.menubar.MenuBar;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.RouterLink;
-import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
-import com.vaadin.flow.theme.lumo.LumoUtility.AlignItems;
-import com.vaadin.flow.theme.lumo.LumoUtility.BoxSizing;
-import com.vaadin.flow.theme.lumo.LumoUtility.Display;
-import com.vaadin.flow.theme.lumo.LumoUtility.FlexDirection;
-import com.vaadin.flow.theme.lumo.LumoUtility.FontSize;
-import com.vaadin.flow.theme.lumo.LumoUtility.FontWeight;
-import com.vaadin.flow.theme.lumo.LumoUtility.Gap;
-import com.vaadin.flow.theme.lumo.LumoUtility.Height;
-import com.vaadin.flow.theme.lumo.LumoUtility.ListStyleType;
-import com.vaadin.flow.theme.lumo.LumoUtility.Margin;
-import com.vaadin.flow.theme.lumo.LumoUtility.Overflow;
-import com.vaadin.flow.theme.lumo.LumoUtility.Padding;
-import com.vaadin.flow.theme.lumo.LumoUtility.TextColor;
-import com.vaadin.flow.theme.lumo.LumoUtility.Whitespace;
-import com.vaadin.flow.theme.lumo.LumoUtility.Width;
-import java.io.ByteArrayInputStream;
-import java.util.Optional;
-import me.khadija.data.entity.User;
+import com.vaadin.flow.theme.lumo.LumoUtility;
+import com.vaadin.flow.theme.lumo.LumoUtility.*;
+import me.khadija.models.Conference;
+import me.khadija.models.User;
+import me.khadija.models.UserConference;
 import me.khadija.security.AuthenticatedUser;
+import me.khadija.services.ConferenceService;
+import me.khadija.services.UserConferenceService;
+import me.khadija.services.UserService;
+import me.khadija.views.conference.ChatView;
+import me.khadija.views.conference.ConferenceDialog;
+import me.khadija.views.conference.ConferencesView;
 import me.khadija.views.dashboard.DashboardView;
 import me.khadija.views.login.LoginView;
 import me.khadija.views.register.RegisterView;
 import org.vaadin.lineawesome.LineAwesomeIcon;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 /**
  * The main view is a top-level placeholder for other views.
  */
-public class MainLayout extends AppLayout {
+public class MainLayout extends AppLayout implements BeforeEnterObserver {
 
     /**
      * A simple navigation item component, based on ListItem element.
@@ -78,66 +70,51 @@ public class MainLayout extends AppLayout {
 
     }
 
-    private AuthenticatedUser authenticatedUser;
-    private AccessAnnotationChecker accessChecker;
+    private final AuthenticatedUser authenticatedUser;
+    private final AccessAnnotationChecker accessChecker;
 
-    public MainLayout(AuthenticatedUser authenticatedUser, AccessAnnotationChecker accessChecker) {
+    public MainLayout(AuthenticatedUser authenticatedUser,
+                      AccessAnnotationChecker accessChecker) {
         this.authenticatedUser = authenticatedUser;
         this.accessChecker = accessChecker;
 
         addToNavbar(createHeaderContent());
     }
 
-    private Component createHeaderContent() {
-        Header header = new Header();
-        header.addClassNames(BoxSizing.BORDER, Display.FLEX, FlexDirection.COLUMN, Width.FULL);
-
-        Div layout = new Div();
-        layout.addClassNames(Display.FLEX, AlignItems.CENTER, Padding.Horizontal.LARGE);
-
-        H1 appName = new H1("Conferences");
-        appName.addClassNames(Margin.Vertical.MEDIUM, Margin.End.AUTO, FontSize.LARGE);
-        layout.add(appName);
-
-        Optional<User> maybeUser = authenticatedUser.get();
-        if (maybeUser.isPresent()) {
-            User user = maybeUser.get();
-
-            Avatar avatar = new Avatar(user.getName());
-            StreamResource resource = new StreamResource("profile-pic",
-                    () -> new ByteArrayInputStream(user.getProfilePicture()));
-            avatar.setImageResource(resource);
-            avatar.setThemeName("xsmall");
-            avatar.getElement().setAttribute("tabindex", "-1");
-
-            MenuBar userMenu = new MenuBar();
-            userMenu.setThemeName("tertiary-inline contrast");
-
-            MenuItem userName = userMenu.addItem("");
-            Div div = new Div();
-            div.add(avatar);
-            div.add(user.getName());
-            div.add(new Icon("lumo", "dropdown"));
-            div.getElement().getStyle().set("display", "flex");
-            div.getElement().getStyle().set("align-items", "center");
-            div.getElement().getStyle().set("gap", "var(--lumo-space-s)");
-            userName.add(div);
-            userName.getSubMenu().addItem("Sign out", e -> {
-                authenticatedUser.logout();
-            });
-
-            layout.add(userMenu);
-        } else {
-            Anchor loginLink = new Anchor("login", "Sign in");
-            layout.add(loginLink);
+    @Override
+    public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
+        if (authenticatedUser.get().isEmpty()) {
+            getUI().ifPresent(ui -> ui.navigate(LoginView.class));
         }
+    }
 
-        Nav nav = new Nav();
-        nav.addClassNames(Display.FLEX, Overflow.AUTO, Padding.Horizontal.MEDIUM, Padding.Vertical.XSMALL);
+    private Component createHeaderContent() {
+        final Header header = new Header();
+        header.addClassNames(BoxSizing.BORDER,
+                Display.FLEX,
+                FlexDirection.ROW,
+                Width.FULL,
+                Padding.Horizontal.MEDIUM,
+                JustifyContent.EVENLY,
+                AlignItems.CENTER);
+
+        final H1 title = new H1("Conferences");
+        title.addClassName(FontSize.LARGE);
+        header.add(title);
+
+        final Nav nav = new Nav();
+        nav.addClassNames(Display.FLEX,
+                Overflow.AUTO,
+                Padding.Horizontal.MEDIUM,
+                Padding.Vertical.XSMALL);
 
         // Wrap the links in a list; improves accessibility
-        UnorderedList list = new UnorderedList();
-        list.addClassNames(Display.FLEX, Gap.SMALL, ListStyleType.NONE, Margin.NONE, Padding.NONE);
+        final UnorderedList list = new UnorderedList();
+        list.addClassNames(Display.FLEX,
+                Gap.SMALL,
+                ListStyleType.NONE,
+                Margin.NONE,
+                Padding.NONE);
         nav.add(list);
 
         for (MenuItemInfo menuItem : createMenuItems()) {
@@ -147,17 +124,48 @@ public class MainLayout extends AppLayout {
 
         }
 
-        header.add(layout, nav);
+        header.add(nav);
+
+
+        Optional<User> maybeUser = authenticatedUser.get();
+        if (maybeUser.isPresent()) {
+            User user = maybeUser.get();
+
+            Avatar avatar = new Avatar(user.getFirstName() + " " + user.getLastName());
+            avatar.setThemeName("xsmall");
+            avatar.getElement().setAttribute("tabindex", "-1");
+
+            MenuBar userMenu = new MenuBar();
+            userMenu.setThemeName("tertiary-inline contrast");
+
+            MenuItem userName = userMenu.addItem("");
+            Div div = new Div();
+            div.add(avatar);
+            div.add(user.getFirstName());
+            div.add(new Icon("lumo", "dropdown"));
+            div.getElement().getStyle().set("display", "flex");
+            div.getElement().getStyle().set("align-items", "center");
+            div.getElement().getStyle().set("gap", "var(--lumo-space-s)");
+            userName.add(div);
+            userName.getSubMenu().addItem("Sign out", e -> {
+                authenticatedUser.logout();
+            });
+
+            header.add(userMenu);
+        } else {
+            Anchor loginLink = new Anchor("login", "Sign in");
+            header.add(loginLink);
+        }
+
+
         return header;
     }
 
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
-                new MenuItemInfo("Dashboard", LineAwesomeIcon.LIST_SOLID.create(), DashboardView.class), //
-
-                new MenuItemInfo("Login", LineAwesomeIcon.FILE.create(), LoginView.class), //
-
-                new MenuItemInfo("Register", LineAwesomeIcon.FILE.create(), RegisterView.class), //
+                new MenuItemInfo("Dashboard", LineAwesomeIcon.LIST_SOLID.create(), DashboardView.class),
+                new MenuItemInfo("My Conferences", LineAwesomeIcon.LIST_SOLID.create(), ConferencesView.class),
+                new MenuItemInfo("Chat", LineAwesomeIcon.COMMENTS.create(), ChatView.class)
 
         };
     }

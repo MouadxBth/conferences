@@ -1,42 +1,57 @@
 package me.khadija;
 
 import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.theme.Theme;
-import javax.sql.DataSource;
-import me.khadija.data.service.UserRepository;
+import me.khadija.services.ConferenceService;
+import me.khadija.services.ConfirmationTokenService;
+import me.khadija.services.UserConferenceService;
+import me.khadija.services.UserService;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.sql.init.SqlDataSourceScriptDatabaseInitializer;
-import org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperties;
-import org.springframework.context.annotation.Bean;
 
-/**
- * The entry point of the Spring Boot application.
- *
- * Use the @PWA annotation make the application installable on phones, tablets
- * and some desktop browsers.
- *
- */
 @SpringBootApplication
 @Theme(value = "conferences")
-public class Application implements AppShellConfigurator {
+@Push
+public class Application implements AppShellConfigurator, CommandLineRunner {
+
+    private final UserService userService;
+    private final ConferenceService conferenceService;
+    private final UserConferenceService userConferenceService;
+    private final ConfirmationTokenService confirmationTokenService;
+
+    public Application(UserService userService,
+                       ConferenceService conferenceService,
+                       UserConferenceService userConferenceService,
+                       ConfirmationTokenService confirmationTokenService) {
+        this.userService = userService;
+        this.conferenceService = conferenceService;
+        this.userConferenceService = userConferenceService;
+        this.confirmationTokenService = confirmationTokenService;
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
 
-    @Bean
-    SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer(DataSource dataSource,
-            SqlInitializationProperties properties, UserRepository repository) {
-        // This bean ensures the database is only initialized when empty
-        return new SqlDataSourceScriptDatabaseInitializer(dataSource, properties) {
-            @Override
-            public boolean initializeDatabase() {
-                if (repository.count() == 0L) {
-                    return super.initializeDatabase();
-                }
-                return false;
-            }
-        };
+    @Override
+    public void run(String... args) {
+       // dropTables();
+        createTables();
+    }
+
+    private void createTables() {
+        userService.createTable();
+        conferenceService.createTable();
+        userConferenceService.createTable();
+        confirmationTokenService.createTable();
+    }
+
+    private void dropTables() {
+        confirmationTokenService.dropTable();
+        userConferenceService.dropTable();
+        conferenceService.dropTable();
+        userService.dropTable();
     }
 }
