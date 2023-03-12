@@ -13,6 +13,8 @@ import me.khadija.services.UserService;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 
 public class ConferenceView extends HorizontalLayout {
 
@@ -61,12 +63,30 @@ public class ConferenceView extends HorizontalLayout {
         header = new HorizontalLayout();
         title = new Span(conference.getTitle());
         createdAt = new Span(conference.getCreatedAt().toString());
-        startsAt = new Span(conference.getStartsAt() == null ? "" : Duration.between(LocalDateTime.now(), conference.getStartsAt()).toHoursPart() + "hrs");
+        startsAt = new Span();
         owner = new Span(conference.getOwner() == null ? "" : conference.getOwner().getFirstName() + " " + conference.getOwner().getLastName());
         description = new Paragraph(conference.getDescription());
         footer = new HorizontalLayout();
         members = new Span(conference.getMember_limit() == null || conference.getMember_limit() <= 0 ? "Unlimited"
                 : userConferenceService.findMembers(conference).size() + "/" + conference.getMember_limit());
+
+        if (conference.getStartsAt() != null) {
+            final Duration duration = Duration.between(conference.getStartsAt(),
+                    LocalDateTime.now());
+
+            System.out.println(duration.toString());
+            if (duration.isNegative()) {
+                startsAt.setText("Started");
+            }
+            else {
+                long hours = duration.toHours();
+                long minutes = duration.minusHours(hours).toMinutes();
+                long seconds = duration.minusHours(hours).minusMinutes(minutes).getSeconds();
+
+                startsAt.setText(String.format("%d hours, %d minutes, %d seconds", hours, minutes, seconds));
+            }
+        }
+
     }
 
     private void setupComponents() {
