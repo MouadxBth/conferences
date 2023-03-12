@@ -77,6 +77,11 @@ public class ConferenceView extends HorizontalLayout {
                         userService,
                         conference).open();
             }
+            else {
+                new ConferenceJoinDialog(userConferenceService,
+                        conference,
+                        authenticatedUser).open();
+            }
         }));
 
         container.setSpacing(false);

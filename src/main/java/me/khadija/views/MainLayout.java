@@ -165,7 +165,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver {
         return new MenuItemInfo[]{ //
                 new MenuItemInfo("Dashboard", LineAwesomeIcon.LIST_SOLID.create(), DashboardView.class),
                 new MenuItemInfo("My Conferences", LineAwesomeIcon.LIST_SOLID.create(), ConferencesView.class),
-                new MenuItemInfo("Chat", LineAwesomeIcon.COMMENTS.create(), ChatView.class)
+               // new MenuItemInfo("Chat", LineAwesomeIcon.COMMENTS.create(), ChatView.class)
 
         };
     }

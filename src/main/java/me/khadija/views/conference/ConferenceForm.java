@@ -1,11 +1,10 @@
 package me.khadija.views.conference;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasValue;
-import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.textfield.NumberField;
@@ -46,6 +45,7 @@ public class ConferenceForm extends FormLayout {
                 privateConference,
                 startsAt);
     }
+
 
     private void createFields() {
         name = createInputField();

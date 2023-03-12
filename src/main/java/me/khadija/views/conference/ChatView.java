@@ -9,7 +9,6 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.page.Page;
-import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.Tabs.Orientation;
 import com.vaadin.flow.router.PageTitle;
@@ -17,11 +16,14 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility.*;
 import jakarta.annotation.security.PermitAll;
 import me.khadija.security.AuthenticatedUser;
+import me.khadija.services.ConferenceService;
 import me.khadija.services.UserConferenceService;
 import me.khadija.views.MainLayout;
+import me.khadija.views.chat.ChatInfo;
+import me.khadija.views.chat.ChatTab;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @PageTitle("Chat")
@@ -29,66 +31,34 @@ import java.util.UUID;
 @PermitAll
 public class ChatView extends HorizontalLayout {
 
-    public static class ChatTab extends Tab {
-        private final ChatInfo chatInfo;
-
-        public ChatTab(ChatInfo chatInfo) {
-            this.chatInfo = chatInfo;
-        }
-
-        public ChatInfo getChatInfo() {
-            return chatInfo;
-        }
-    }
-
-    public static class ChatInfo {
-        private String name;
-        private int unread;
-        private Span unreadBadge;
-
-        private ChatInfo(String name, int unread) {
-            this.name = name;
-            this.unread = unread;
-        }
-
-        public void resetUnread() {
-            unread = 0;
-            updateBadge();
-        }
-
-        public void incrementUnread() {
-            unread++;
-            updateBadge();
-        }
-
-        private void updateBadge() {
-            unreadBadge.setText(unread + "");
-            unreadBadge.setVisible(unread != 0);
-        }
-
-        public void setUnreadBadge(Span unreadBadge) {
-            this.unreadBadge = unreadBadge;
-            updateBadge();
-        }
-
-        public String getCollaborationTopic() {
-            return "chat/" + name;
-        }
-    }
-
-    private final List<ChatInfo> chatInfoList;
+    private final ConferenceService conferenceService;
     private ChatInfo currentChat;
-    private Tabs tabs;
+    private final Tabs tabs;
+    private List<ChatInfo> chatInfoList = new ArrayList<>();
 
     public ChatView(AuthenticatedUser authenticatedUser,
-                    UserConferenceService userConferenceService) {
-        addClassNames("chat-view", Width.FULL, Display.FLEX, Flex.AUTO);
+                    UserConferenceService userConferenceService, ConferenceService conferenceService) {
+        this.conferenceService = conferenceService;
+
+        addClassNames("chat-view",
+                Width.FULL,
+                Display.FLEX,
+                Flex.AUTO);
         setSpacing(false);
-        this.chatInfoList = userConferenceService.findConferences(authenticatedUser.get().orElse(null))
-                .stream()
-                .map(conference -> new ChatInfo(conference.getTitle(), 0))
-                .toList();
-        this.currentChat = chatInfoList.get(0);
+
+        authenticatedUser.get().ifPresent(user -> {
+            chatInfoList = conferenceService.fetchAll()
+                    .stream()
+                    .filter(conference ->
+                            (conference.getOwner() != null
+                                    && conference.getOwner().getUsername().equals(user.getUsername()))
+                                    || (userConferenceService.isInConference(user, conference)))
+                    .map(conference -> new ChatInfo(conference.getTitle(), 0))
+                    .toList();
+        });
+
+        if (!chatInfoList.isEmpty())
+            this.currentChat = chatInfoList.get(0);
 
         // UserInfo is used by Collaboration Engine and is used to share details
         // of users to each other to able collaboration. Replace this with
@@ -96,8 +66,11 @@ public class ChatView extends HorizontalLayout {
         // identifier, and the user's real name. You can also provide the users
         // avatar by passing an url to the image as a third parameter, or by
         // configuring an `ImageProvider` to `avatarGroup`.
-        final UserInfo userInfo = authenticatedUser.get().map(user -> new UserInfo(user.getId() + "",
-                user.getFirstName() + " " + user.getLastName())).orElse(new UserInfo(UUID.randomUUID().toString()));
+
+        final UserInfo userInfo = authenticatedUser.get()
+                .map(user -> new UserInfo(user.getId() + "",
+                user.getFirstName() + " " + user.getLastName()))
+                .orElse(new UserInfo(UUID.randomUUID().toString()));
 
         tabs = new Tabs();
 
@@ -120,7 +93,8 @@ public class ChatView extends HorizontalLayout {
         // the current user using the component, and a topic Id. Topic id can be
         // any freeform string. In this template, we have used the format
         // "chat/#general".
-        CollaborationMessageList list = new CollaborationMessageList(userInfo, currentChat.getCollaborationTopic());
+        CollaborationMessageList list = new CollaborationMessageList(userInfo,
+                currentChat == null ? "" : currentChat.getCollaborationTopic());
         list.setSizeFull();
 
         // `CollaborationMessageInput is a textfield and button, to be able to
@@ -171,7 +145,7 @@ public class ChatView extends HorizontalLayout {
         Span badge = new Span();
         chat.setUnreadBadge(badge);
         badge.getElement().getThemeList().add("badge small contrast");
-        tab.add(new Span("#" + chat.name), badge);
+        tab.add(new Span("#" + chat.getName()), badge);
 
         return tab;
     }
