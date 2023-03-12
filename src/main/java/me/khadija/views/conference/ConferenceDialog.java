@@ -66,7 +66,17 @@ public class ConferenceDialog extends Dialog {
             try {
                 conferenceForm.getBinder().writeBean(conference);
                 if (conference.getId() == null) {
-                    userConferenceService.addConference(conference);
+                    try {
+                        userConferenceService.addConference(conference);
+                    }
+                    catch (Exception e) {
+                        close();
+                        final Notification notification = createNotification("Error: " + e.getMessage());
+                        notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+                        notification.setDuration(3 * 1000);
+                        notification.open();
+                        return;
+                    }
                 }
                 else {
                     conferenceService.find(conference.getId())
@@ -81,7 +91,7 @@ public class ConferenceDialog extends Dialog {
                 UI.getCurrent().navigate(DashboardView.class);
             } catch (ValidationException e) {
                 final Notification notification = createNotification("No modification was applied!");
-                notification.addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
                 notification.setDuration(3 * 1000);
                 notification.open();
                 throw new RuntimeException(e);
