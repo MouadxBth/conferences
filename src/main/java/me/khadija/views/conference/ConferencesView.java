@@ -53,8 +53,9 @@ public class ConferencesView extends VerticalLayout implements AfterNavigationOb
         authenticatedUser.get().ifPresent(user ->
                 conferenceListView.setItems(conferenceService.fetchAll()
                 .stream()
-                .filter(conference -> conference.getOwner() != null
+                .filter(conference -> (conference.getOwner() != null
                         && conference.getOwner().getUsername().equals(user.getUsername()))
+                || userConferenceService.isInConference(user, conference))
                 .toList()));
     }
 

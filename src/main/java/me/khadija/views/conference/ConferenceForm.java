@@ -41,9 +41,9 @@ public class ConferenceForm extends FormLayout {
                 owner,
                 member_limit,
                 title,
-                description,
                 privateConference,
-                startsAt);
+                startsAt,
+                description);
     }
 
 

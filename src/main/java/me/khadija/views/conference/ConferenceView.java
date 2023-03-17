@@ -11,10 +11,8 @@ import me.khadija.services.ConferenceService;
 import me.khadija.services.UserConferenceService;
 import me.khadija.services.UserService;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 
 public class ConferenceView extends HorizontalLayout {
 
@@ -57,6 +55,7 @@ public class ConferenceView extends HorizontalLayout {
         add(container);
 
     }
+
     private void createComponents(Conference conference) {
         System.out.println(conference);
         container = new VerticalLayout();
@@ -71,22 +70,35 @@ public class ConferenceView extends HorizontalLayout {
                 : userConferenceService.findMembers(conference).size() + "/" + conference.getMember_limit());
 
         if (conference.getStartsAt() != null) {
-            final Duration duration = Duration.between(conference.getStartsAt(),
-                    LocalDateTime.now());
+            final long diff = ChronoUnit.NANOS.between(conference.getStartsAt(), LocalDateTime.now());
 
-            System.out.println(duration.toString());
-            if (duration.isNegative()) {
+            System.out.println("DIFF: " + -diff);
+            System.out.println(getReadableTime(-diff));
+
+            if (diff >= 0)
                 startsAt.setText("Started");
-            }
-            else {
-                long hours = duration.toHours();
-                long minutes = duration.minusHours(hours).toMinutes();
-                long seconds = duration.minusHours(hours).minusMinutes(minutes).getSeconds();
-
-                startsAt.setText(String.format("%d hours, %d minutes, %d seconds", hours, minutes, seconds));
-            }
+            else
+                startsAt.setText(getReadableTime(-diff));
         }
 
+    }
+
+    private String getReadableTime(Long nanos) {
+
+        long tempSec = nanos / (1000 * 1000 * 1000);
+        long sec = tempSec % 60;
+        long min = (tempSec / 60) % 60;
+        long hour = (tempSec / (60 * 60)) % 24;
+        long day = (tempSec / (24 * 60 * 60)) % 24;
+
+        if (day <= 0 && hour <= 0 && min <= 0)
+            return String.format("%d seconds", sec);
+        if (day <= 0 && hour <= 0)
+            return String.format("%d minutes %d seconds", min, sec);
+        if (day <= 0)
+            return String.format("%d hours %d minutes %d seconds", hour, min, sec);
+
+        return String.format("%d days %d hours %d minutes %d seconds", day, hour, min, sec);
     }
 
     private void setupComponents() {
@@ -95,9 +107,8 @@ public class ConferenceView extends HorizontalLayout {
                 new ConferenceDialog(userConferenceService,
                         conferenceService,
                         userService,
-                        conference).open();
-            }
-            else {
+                        conference, false).open();
+            } else {
                 new ConferenceJoinDialog(userConferenceService,
                         conference,
                         authenticatedUser).open();
